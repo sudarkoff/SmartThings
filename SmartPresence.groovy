@@ -9,8 +9,8 @@ definition(
     author: "George Sudarkoff",
     description: "Change mode (by invoking various \"Hello, Home\" phrases) based on presense and current mode.",
     category: "Mode Magic",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic%402x.png"
+    iconUrl: "https://raw.githubusercontent.com/sudarkoff/smarttings/master/SmartPresence.png",
+    iconX2Url: "https://raw.githubusercontent.com/sudarkoff/smarttings/master/SmartPresence@2x.png"
 )
 
 preferences {
