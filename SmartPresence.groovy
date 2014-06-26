@@ -15,7 +15,7 @@ definition(
 
 preferences {
     page(name: "selectPhrases")
-  
+
     page( name:"Settings", title:"Settings", uninstall:true, install:true ) {
         section("False alarm threshold (defaults to 10 min)") {
             input "falseAlarmThreshold", "decimal", title: "Number of minutes", required: false
@@ -43,7 +43,7 @@ def selectPhrases() {
         section("All of these sensors") {
             input "people", "capability.presenceSensor", title: "Monitor All of These Presences", required: true, multiple: true, refreshAfterSelection:true
         }
-        
+
         def phrases = location.helloHome?.getPhrases()*.label
         if (phrases) {
             phrases.sort()
@@ -132,13 +132,13 @@ def changeSunMode(newMode) {
     if(allOk) {
         if(everyoneIsAway() && (state.sunMode = "sunrise")) {
             log.info("Sunrise but nobody's home, switching to Away mode.")
-            def delay = (falseAlarmThreshold != null && falseAlarmThreshold != "") ? falseAlarmThreshold * 60 : 10 * 60 
+            def delay = (falseAlarmThreshold != null && falseAlarmThreshold != "") ? falseAlarmThreshold * 60 : 10 * 60
             runIn(delay, "setAway")
         }
 
         if(everyoneIsAway() && (state.sunMode = "sunset")) {
             log.info("Sunset and nobody's home, switching to Away mode")
-            def delay = (falseAlarmThreshold != null && falseAlarmThreshold != "") ? falseAlarmThreshold * 60 : 10 * 60 
+            def delay = (falseAlarmThreshold != null && falseAlarmThreshold != "") ? falseAlarmThreshold * 60 : 10 * 60
             runIn(delay, "setAway")
         }
 
@@ -156,7 +156,7 @@ def presence(evt) {
 
             if(everyoneIsAway()) {
                 log.info("Everybody's gone, running Away sequence.")
-                def delay = (falseAlarmThreshold != null && falseAlarmThreshold != "") ? falseAlarmThreshold * 60 : 10 * 60 
+                def delay = (falseAlarmThreshold != null && falseAlarmThreshold != "") ? falseAlarmThreshold * 60 : 10 * 60
                 runIn(delay, "setAway")
             }
         } else {
@@ -164,7 +164,7 @@ def presence(evt) {
             if (lastTime == null || now() - lastTime >= 1 * 60000) {
                 log.info("Somebody's back, running Home sequence")
                 setHome()
-            }    
+            }
             state[evt.deviceId] = now()
         }
     }
