@@ -18,44 +18,45 @@ definition(
     name: "Working From Home",
     namespace: "sudarkoff.com",
     author: "George Sudarkoff",
-    description: "If after a particular time of day certain people/cars are still present, trigger a \"Working From Home\" mode.",
+    description: "If after a particular time of day a certain person is still at home, trigger a 'Working From Home' action.",
     category: "Mode Magic",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic.png",
     iconX2Url: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic@2x.png"
 )
 
 preferences {
-    page (name: "selectPhrase")
+    page (name:"configActions")
 }
 
-def selectPhrase() {
-    def configured = settings.wfhPhrase
-    dynamicPage(name: "selectPhrase", title: "Configure", install: true, uninstall: true) {
-        section ("Who?") {
-            input "people", "capability.presenceSensor", title: "When these people", multiple: true, required: true
+def configActions() {
+    dynamicPage(name: "configActions", title: "Configure Actions", uninstall: true, install: true) {
+        section ("When this person") {
+            input "person", "capability.presenceSensor", multiple: false, required: true
         }
-        section ("When?") {
-            input "timeOfDay", "time", title: "Still at home after", required: true
-        }
-        section (title: "More Options", hidden: hideOptionsSection(), hideable: true) {
-            input "days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
-                options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            input "modes", "mode", title: "Only when mode is", multiple: true, required: false
+        section ("Still at home past") {
+            input "timeOfDay", "time", required: true
         }
 
         def phrases = location.helloHome?.getPhrases()*.label
         if (phrases) {
             phrases.sort()
-            section("Action") {
-                input "wfhPhrase", "enum", title: "Perform action", required: true, options: phrases 
+            section("Perform this action") {
+                input "wfhPhrase", "enum", required: true, options: phrases
             }
+        }
+
+        section (title: "More options", hidden: hideOptions(), hideable: true) {
+            input "days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
+                options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            input "modes", "mode", title: "Only when mode is", multiple: true, required: false
+            input "sendPushMessage", "enum", title: "Send a push notification?", metadata: [values:["Yes","No"]], required: false
+            input "phone", "phone", title: "Send a Text Message?", required: false
         }
     }
 }
 
 def installed() {
     initialize()
-    subscribe(app)
 }
 
 def updated() {
@@ -64,15 +65,30 @@ def updated() {
 }
 
 def initialize() {
-    schedule(timeOfDay, "checkPresence")
+    schedule(timeToday(timeOfDay, location.timeZone), "checkPresence")
 }
 
 def checkPresence() {
     if (daysOk && modeOk) {
-        if (people.latestValue("presence") == "present") {
+        if (person.latestValue("presence") == "present") {
+            log.debug "${person} is present, triggering WFH action."
             location.helloHome.execute(settings.wfhPhrase)
+            def message = "${location.name} executed '${settings.wfhPhrase}' because ${person} is home."
+            send(message)
         }
     }
+}
+
+private send(msg) {
+    if (sendPushMessage != "No") {
+        sendPush(msg)
+    }
+
+    if (phone) {
+        sendSms(phone, msg)
+    }
+
+    log.debug msg
 }
 
 private getModeOk() {
@@ -96,7 +112,7 @@ private getDaysOk() {
     result
 }
 
-private hideOptionsSection() {
-    (days || modes) ? false : true
+private hideOptions() {
+    (days || modes)? false: true
 }
 
