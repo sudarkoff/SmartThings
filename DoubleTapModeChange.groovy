@@ -16,7 +16,7 @@
 
 definition(
     name: "Double Tap Mode Switch",
-    namespace: "sudarkoff.com",
+    namespace: "com.sudarkoff",
     author: "George Sudarkoff",
     description: "Execute a 'Hello, Home' phrase when an existing switch is tapped twice in a row.",
     category: "Mode Magic",
@@ -47,8 +47,9 @@ def configApp() {
             input "days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
                 options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
             input "modes", "mode", title: "Only when mode is", multiple: true, required: false
-            input "sendPushMessage", "enum", title: "Send a push notification?", metadata: [values:["Yes","No"]], required: false
+            input "sendPushMessage", "bool", title: "Send a push notification?"
             input "phone", "phone", title: "Send a Text Message?", required: false
+            input "switches", "capability.switch", title: "Flash lights?", multiple: true, required: false
         }
     }
 }
@@ -78,11 +79,13 @@ def switchHandler(evt) {
                 location.helloHome.execute(settings.onPhrase)
                 def message = "${location.name} executed ${settings.onPhrase}"
                 send(message)
+                flashLights()
             } else if (evt.value == "off" && lastTwoStatesWere("off", recentStates, evt)) {
                 log.debug "detected two taps, execute OFF phrase"
                 location.helloHome.execute(settings.offPhrase)
                 def message = "${location.name} executed ${settings.offPhrase}"
                 send(message)
+                flashLights()
             }
         }
         else {
@@ -120,6 +123,51 @@ private send(msg) {
     }
 
     log.debug msg
+}
+
+private flashLights() {
+    def doFlash = true
+    def onFor = onFor ?: 200
+    def offFor = offFor ?: 200
+    def numFlashes = numFlashes ?: 2
+
+    log.debug "LAST ACTIVATED IS: ${state.lastActivated}"
+    if (state.lastActivated) {
+        def elapsed = now() - state.lastActivated
+        def sequenceTime = (numFlashes + 1) * (onFor + offFor)
+        doFlash = elapsed > sequenceTime
+        log.debug "DO FLASH: $doFlash, ELAPSED: $elapsed, LAST ACTIVATED: ${state.lastActivated}"
+    }
+
+    if (doFlash) {
+        log.debug "FLASHING $numFlashes times"
+        state.lastActivated = now()
+        log.debug "LAST ACTIVATED SET TO: ${state.lastActivated}"
+        def initialActionOn = switches.collect{it.currentSwitch != "on"}
+        def delay = 1L
+        numFlashes.times {
+            log.trace "Switch on after $delay msec"
+            switches.eachWithIndex {s, i ->
+                if (initialActionOn[i]) {
+                    s.on(delay: delay)
+                }
+                else {
+                    s.off(delay:delay)
+                }
+            }
+            delay += onFor
+            log.trace "Switch off after $delay msec"
+            switches.eachWithIndex {s, i ->
+                if (initialActionOn[i]) {
+                    s.off(delay: delay)
+                }
+                else {
+                    s.on(delay:delay)
+                }
+            }
+            delay += offFor
+        }
+    }
 }
 
 private getModeOk() {
