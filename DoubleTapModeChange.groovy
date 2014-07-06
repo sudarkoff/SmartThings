@@ -26,6 +26,13 @@ definition(
 
 preferences {
     page (name: "configApp")
+
+    page (name: "timeIntervalInput", title: "Only during a certain time") {
+        section {
+            input "starting", "time", title: "Starting", required: false
+            input "ending", "time", title: "Ending", required: false
+        }
+    }
 }
 
 def configApp() {
@@ -43,32 +50,50 @@ def configApp() {
             }
         }
 
+        section (title: "Notification method") {
+            input "sendPushMessage", "bool", title: "Send a push notification?"
+        }
+
         section (title: "More Options", hidden: hideOptionsSection(), hideable: true) {
+            input "phone", "phone", title: "Additionally, also send a text message to:", required: false
+            input "flashLights", "capability.switch", title: "And flash these lights", multiple: true, required: false
+
+            input "customName", "text", title: "Assign a name", required: false
+
+            def timeLabel = timeIntervalLabel()
+            href "timeIntervalInput", title: "Only during a certain time", description: timeLabel ?: "Tap to set", state: timeLabel ? "complete" : null
+
             input "days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
                 options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
             input "modes", "mode", title: "Only when mode is", multiple: true, required: false
-            input "sendPushMessage", "bool", title: "Send a push notification?"
-            input "phone", "phone", title: "Send a Text Message?", required: false
-            input "switches", "capability.switch", title: "Flash lights?", multiple: true, required: false
         }
+
     }
 }
 
 def installed()
 {
-    subscribe(master, "switch", switchHandler, [filterEvents: false])
+    initialize()
 }
 
 def updated()
 {
     unsubscribe()
+    initialize()
+}
+
+def initialize()
+{
+    if (customName) {
+        state.currentAppLabel = customName
+    }
     subscribe(master, "switch", switchHandler, [filterEvents: false])
 }
 
 def switchHandler(evt) {
     log.info evt.value
 
-    if (daysOk && modeOk) {
+    if (allOk) {
         // use Event rather than DeviceState because we may be changing DeviceState to only store changed values
         def recentStates = master.eventsSince(new Date(now() - 4000), [all:true, max: 10]).findAll{it.name == "switch"}
         log.debug "${recentStates?.size()} STATES FOUND, LAST AT ${recentStates ? recentStates[0].dateCreated : ''}"
@@ -131,23 +156,18 @@ private flashLights() {
     def offFor = offFor ?: 200
     def numFlashes = numFlashes ?: 2
 
-    log.debug "LAST ACTIVATED IS: ${state.lastActivated}"
     if (state.lastActivated) {
         def elapsed = now() - state.lastActivated
         def sequenceTime = (numFlashes + 1) * (onFor + offFor)
         doFlash = elapsed > sequenceTime
-        log.debug "DO FLASH: $doFlash, ELAPSED: $elapsed, LAST ACTIVATED: ${state.lastActivated}"
     }
 
     if (doFlash) {
-        log.debug "FLASHING $numFlashes times"
         state.lastActivated = now()
-        log.debug "LAST ACTIVATED SET TO: ${state.lastActivated}"
-        def initialActionOn = switches.collect{it.currentSwitch != "on"}
+        def initialActionOn = flashLights.collect{it.currentSwitch != "on"}
         def delay = 1L
         numFlashes.times {
-            log.trace "Switch on after $delay msec"
-            switches.eachWithIndex {s, i ->
+            flashLights.eachWithIndex {s, i ->
                 if (initialActionOn[i]) {
                     s.on(delay: delay)
                 }
@@ -156,8 +176,7 @@ private flashLights() {
                 }
             }
             delay += onFor
-            log.trace "Switch off after $delay msec"
-            switches.eachWithIndex {s, i ->
+            flashLights.eachWithIndex {s, i ->
                 if (initialActionOn[i]) {
                     s.off(delay: delay)
                 }
@@ -168,6 +187,11 @@ private flashLights() {
             delay += offFor
         }
     }
+}
+
+// execution filter methods
+private getAllOk() {
+    modeOk && daysOk && timeOk
 }
 
 private getModeOk() {
@@ -191,7 +215,31 @@ private getDaysOk() {
     result
 }
 
+private getTimeOk() {
+    def result = true
+    if (starting && ending) {
+        def currTime = now()
+        def start = timeToday(starting).time
+        def stop = timeToday(ending).time
+        result = start < stop ? currTime >= start && currTime <= stop : currTime <= stop || currTime >= start
+    }
+    log.trace "timeOk = $result"
+    result
+}
+
 private hideOptionsSection() {
-    (days || modes) ? false : true
+    (phone || starting || ending || flashLights || customName || days || modes) ? false : true
+}
+
+private hhmm(time, fmt = "h:mm a")
+{
+    def t = timeToday(time, location.timeZone)
+    def f = new java.text.SimpleDateFormat(fmt)
+    f.setTimeZone(location.timeZone ?: timeZone(time))
+    f.format(t)
+}
+
+private timeIntervalLabel() {
+    (starting && ending) ? hhmm(starting) + "-" + hhmm(ending, "h:mm a z") : ""
 }
 
