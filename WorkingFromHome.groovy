@@ -41,17 +41,20 @@ def configActions() {
         if (phrases) {
             phrases.sort()
             section("Perform this action") {
-                input "wfhPhrase", "enum", title: "\"Hello, Home\" phrase", required: true, options: phrases
+                input "wfhPhrase", "enum", title: "\"Hello, Home\" action", required: true, options: phrases
             }
         }
 
         section (title: "More options", hidden: hideOptions(), hideable: true) {
             input "sendPushMessage", "bool", title: "Send a push notification?"
             input "phone", "phone", title: "Send a Text Message?", required: false
-            input "customName", "text", title: "Assign a name", required: false
             input "days", "enum", title: "Set for specific day(s) of the week", multiple: true, required: false,
                 options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            input "modes", "mode", title: "Set for specific mode(s)", multiple: true, required: false
+        }
+
+        section([mobileOnly:true]) {
+            label title: "Assign a name", required: false
+            mode title: "Set for specific mode(s)", required: false
         }
     }
 }
