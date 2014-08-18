@@ -1,5 +1,5 @@
 /**
- *  Double Tap Mode Switch
+ *  Double Tap Switch for "Hello, Home" Action
  *
  *  Copyright 2014 George Sudarkoff
  *
@@ -15,10 +15,10 @@
  */
 
 definition(
-    name: "Double Tap Mode Switch",
+    name: "Double Tap Switch for 'Hello, Home' Action",
     namespace: "com.sudarkoff",
     author: "George Sudarkoff",
-    description: "Execute a 'Hello, Home' phrase when an existing switch is tapped twice in a row.",
+    description: "Execute a 'Hello, Home' action when an existing switch is tapped twice in a row.",
     category: "Mode Magic",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic.png",
     iconX2Url: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic@2x.png"
@@ -58,16 +58,17 @@ def configApp() {
             input "phone", "phone", title: "Additionally, also send a text message to:", required: false
             input "flashLights", "capability.switch", title: "And flash these lights", multiple: true, required: false
 
-            input "customName", "text", title: "Assign a name", required: false
-
             def timeLabel = timeIntervalLabel()
             href "timeIntervalInput", title: "Only during a certain time", description: timeLabel ?: "Tap to set", state: timeLabel ? "complete" : null
 
             input "days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
                 options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            input "modes", "mode", title: "Only when mode is", multiple: true, required: false
         }
 
+        section([mobileOnly:true]) {
+            label title: "Assign a name", required: false
+            mode title: "Set for specific mode(s)", required: false
+        }
     }
 }
 
