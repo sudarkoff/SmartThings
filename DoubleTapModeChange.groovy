@@ -20,8 +20,8 @@ definition(
     author: "George Sudarkoff",
     description: "Execute a 'Hello, Home' action when an existing switch is tapped twice in a row.",
     category: "Mode Magic",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic@2x.png"
+    iconUrl: "https://s3.amazonaws.com/smartthings-device-icons/Appliances/appliances17-icn.png",
+    iconX2Url: "https://s3.amazonaws.com/smartthings-device-icons/Appliances/appliances17-icn@2x.png"
 )
 
 preferences {
