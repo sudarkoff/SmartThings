@@ -20,8 +20,8 @@ definition(
     author: "George Sudarkoff",
     description: "If after a particular time of day a certain person is still at home, trigger a 'Working From Home' action.",
     category: "Mode Magic",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic@2x.png"
+    iconUrl: "https://s3.amazonaws.com/smartthings-device-icons/Office/office22-icn.png",
+    iconX2Url: "https://s3.amazonaws.com/smartthings-device-icons/Office/office22-icn@2x.png"
 )
 
 preferences {
