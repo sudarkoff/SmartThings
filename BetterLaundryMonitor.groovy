@@ -31,15 +31,20 @@ preferences {
     input "meter", "capability.powerMeter", multiple: false, required: true
   }
 
+  section ("Advanced options", hidden: true, hideable: true) {
+    input "cycle_start_power_threshold", "number", title: "start cycle when power raises above (W)", description: "10", required: true
+    input "cycle_end_power_threshold", "number", title: "stop cycle when power drops below (W)", description: "8", required: true
+  }
+
   section ("Send this message") {
     input "message", "text", title: "Notification message", description: "Laudry is done!", required: true
   }
 
-  section (title: "Notification method") {
+  section ("Notification method") {
     input "sendPushMessage", "bool", title: "Send a push notification?"
   }
 
-  section (title: "Additionally", hidden: hideOptionsSection(), hideable: true) {
+  section ("Additionally", hidden: hideOptionsSection(), hideable: true) {
     input "phone", "phone", title: "Send a text message to:", required: false
     input "switches", "capability.switch", title: "Turn on this switch", required:false, multiple:true
     input "hues", "capability.colorControl", title: "Turn these hue bulbs", required:false, multiple:true
@@ -69,13 +74,13 @@ def handler(evt) {
   def latestPower = meter.currentValue("power")
   log.trace "Power: ${latestPower}W"
 
-  if (!state.cycleOn && latestPower > 8) {
+  if (!state.cycleOn && latestPower > cycle_start_power_threshold) {
     state.cycleOn = true
     state.cycleStart = now()
     log.trace "Cycle started."
   }
   // If the washer stops drawing power, the cycle is complete, send notification.
-  else if (state.cycleOn && latestPower == 0) {
+  else if (state.cycleOn && latestPower <= cycle_end_power_threshold) {
     send(message)
     lightAlert(evt)
     state.cycleOn = false
@@ -168,4 +173,5 @@ private send(msg) {
 private hideOptionsSection() {
     (phone || switches || hues || color || lightLevel) ? false : true
 }
+
 
