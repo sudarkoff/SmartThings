@@ -29,11 +29,9 @@ definition(
 preferences {
   section ("When this device stops drawing power") {
     input "meter", "capability.powerMeter", multiple: false, required: true
-  }
-
-  section ("Advanced options", hidden: true, hideable: true) {
-    input "cycle_start_power_threshold", "number", title: "start cycle when power raises above (W)", description: "10", required: true
-    input "cycle_end_power_threshold", "number", title: "stop cycle when power drops below (W)", description: "8", required: true
+    input "cycle_start_power_threshold", "number", title: "Start cycle when power consumption goes above (W)", required: true
+    input "cycle_end_power_threshold", "number", title: "Stop cycle when power consumption drops below (W) ...", required: true
+    input "cycle_end_wait", "number", title: "... for at least this long (min)", required: true
   }
 
   section ("Send this message") {
@@ -50,6 +48,7 @@ preferences {
     input "hues", "capability.colorControl", title: "Turn these hue bulbs", required:false, multiple:true
     input "color", "enum", title: "This color", required: false, multiple:false, options: ["White", "Red","Green","Blue","Yellow","Orange","Purple","Pink"]
     input "lightLevel", "enum", title: "This light Level", required: false, options: [[10:"10%"],[20:"20%"],[30:"30%"],[40:"40%"],[50:"50%"],[60:"60%"],[70:"70%"],[80:"80%"],[90:"90%"],[100:"100%"]]
+    input "speech", "capability.capability.speechSynthesis", title:"Speak message via: ", multiple: true, required: false
   }
 }
 
@@ -71,23 +70,39 @@ def initialize() {
 }
 
 def handler(evt) {
-  def latestPower = meter.currentValue("power")
-  log.trace "Power: ${latestPower}W"
+    def latestPower = meter.currentValue("power")
+    log.trace "Power: ${latestPower}W"
 
-  if (!state.cycleOn && latestPower > cycle_start_power_threshold) {
+    if (!state.cycleOn && latestPower > cycle_start_power_threshold) {
+        cycleOn(evt)
+    }
+    // If power drops below threshold, wait for a few minutes.
+    else if (state.cycleOn && latestPower <= cycle_end_power_threshold) {
+        runIn(cycle_end_wait * 60, cycleOff)
+    }
+}
+
+private cycleOn(evc) {
     state.cycleOn = true
     state.cycleStart = now()
     log.trace "Cycle started."
-  }
-  // If the washer stops drawing power, the cycle is complete, send notification.
-  else if (state.cycleOn && latestPower <= cycle_end_power_threshold) {
-    send(message)
-    lightAlert(evt)
-    state.cycleOn = false
-    state.cycleEnd = now()
-    duration = state.cycleEnd - state.cycleStart
-    log.trace "Cycle ended after ${duration} minutes."
-  }
+}
+
+private cycleOff(evt) {
+    def latestPower = meter.currentValue("power")
+    log.trace "Power: ${latestPower}W"
+
+    // If power is still below threshold, end cycle.
+    if (state.cycleOn && latestPower <= cycle_end_power_threshold) {
+        state.cycleOn = false
+        state.cycleEnd = now()
+        duration = state.cycleEnd - state.cycleStart
+        log.trace "Cycle ended after ${duration} minutes."
+
+        send(message)
+        lightAlert(evt)
+        speechAlert(evt)
+    }
 }
 
 private lightAlert(evt) {
@@ -158,6 +173,10 @@ private lightAlert(evt) {
   }
 }
 
+private speechAlert(msg) {
+  speech.speak(msg)
+}
+
 private send(msg) {
   if (sendPushMessage) {
     sendPush(msg)
@@ -171,7 +190,7 @@ private send(msg) {
 }
 
 private hideOptionsSection() {
-    (phone || switches || hues || color || lightLevel) ? false : true
+  (phone || switches || hues || color || lightLevel) ? false : true
 }
 
 
