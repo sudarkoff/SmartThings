@@ -16,12 +16,12 @@
 
 definition(
     name: "Working From Home",
-    namespace: "sudarkoff.com",
+    namespace: "com.sudarkoff",
     author: "George Sudarkoff",
     description: "If after a particular time of day a certain person is still at home, trigger a 'Working From Home' action.",
     category: "Mode Magic",
-    iconUrl: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic.png",
-    iconX2Url: "https://s3.amazonaws.com/smartapp-icons/ModeMagic/Cat-ModeMagic@2x.png"
+    iconUrl: "https://s3.amazonaws.com/smartthings-device-icons/Office/office22-icn.png",
+    iconX2Url: "https://s3.amazonaws.com/smartthings-device-icons/Office/office22-icn@2x.png"
 )
 
 preferences {
@@ -31,26 +31,30 @@ preferences {
 def configActions() {
     dynamicPage(name: "configActions", title: "Configure Actions", uninstall: true, install: true) {
         section ("When this person") {
-            input "person", "capability.presenceSensor", multiple: false, required: true
+            input "person", "capability.presenceSensor", title: "Who?", multiple: false, required: true
         }
         section ("Still at home past") {
-            input "timeOfDay", "time", required: true
+            input "timeOfDay", "time", title: "What time?", required: true
         }
 
         def phrases = location.helloHome?.getPhrases()*.label
         if (phrases) {
             phrases.sort()
             section("Perform this action") {
-                input "wfhPhrase", "enum", required: true, options: phrases
+                input "wfhPhrase", "enum", title: "\"Hello, Home\" action", required: true, options: phrases
             }
         }
 
         section (title: "More options", hidden: hideOptions(), hideable: true) {
-            input "days", "enum", title: "Only on certain days of the week", multiple: true, required: false,
-                options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            input "modes", "mode", title: "Only when mode is", multiple: true, required: false
-            input "sendPushMessage", "enum", title: "Send a push notification?", metadata: [values:["Yes","No"]], required: false
+            input "sendPushMessage", "bool", title: "Send a push notification?"
             input "phone", "phone", title: "Send a Text Message?", required: false
+            input "days", "enum", title: "Set for specific day(s) of the week", multiple: true, required: false,
+                options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        }
+
+        section([mobileOnly:true]) {
+            label title: "Assign a name", required: false
+            mode title: "Set for specific mode(s)", required: false
         }
     }
 }
@@ -60,12 +64,15 @@ def installed() {
 }
 
 def updated() {
-    unsubscribe()
+    unschedule()
     initialize()
 }
 
 def initialize() {
     schedule(timeToday(timeOfDay, location.timeZone), "checkPresence")
+    if (customName) {
+      app.setTitle(customName)
+    }
 }
 
 def checkPresence() {
