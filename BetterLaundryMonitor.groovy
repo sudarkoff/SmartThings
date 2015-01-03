@@ -84,7 +84,6 @@ def handler(evt) {
 
 private cycleOn(evc) {
     state.cycleOn = true
-    state.cycleStart = now()
     log.trace "Cycle started."
 }
 
@@ -95,9 +94,7 @@ private cycleOff(evt) {
     // If power is still below threshold, end cycle.
     if (state.cycleOn && latestPower <= cycle_end_power_threshold) {
         state.cycleOn = false
-        state.cycleEnd = now()
-        duration = state.cycleEnd - state.cycleStart
-        log.trace "Cycle ended after ${duration} minutes."
+        log.trace "Cycle ended."
 
         send(message)
         lightAlert(evt)
